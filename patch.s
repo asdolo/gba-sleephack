@@ -1,4 +1,5 @@
 	.text
+	.arm
 REG_BASE		= 0x4000000
 REG_DISPCNT		= 0x00
 REG_DISPSTAT	= 0x04
@@ -24,21 +25,21 @@ REG_WINOUT		= 0x4A
 REG_BLDCNT		= 0x50
 REG_BLDALPHA	= 0x52
 REG_BLDY		= 0x54
-REG_SG1CNT_L	= 0x60
-REG_SG1CNT_H	= 0x62
-REG_SG1CNT_X	= 0x64
-REG_SG2CNT_L	= 0x68
-REG_SG2CNT_H	= 0x6C
-REG_SG3CNT_L	= 0x70
-REG_SG3CNT_H	= 0x72
-REG_SG3CNT_X	= 0x74
-REG_SG4CNT_L	= 0x78
-REG_SG4CNT_H	= 0x7c
-REG_SGCNT_L		= 0x80
-REG_SGCNT_H		= 0x82
+REG_SOUND1CNT_L	= 0x60
+REG_SOUND1CNT_H	= 0x62
+REG_SOUND1CNT_X	= 0x64
+REG_SOUND2CNT_L	= 0x68
+REG_SOUND2CNT_H	= 0x6C
+REG_SOUND3CNT_L	= 0x70
+REG_SOUND3CNT_H	= 0x72
+REG_SOUND3CNT_X	= 0x74
+REG_SOUND4CNT_L	= 0x78
+REG_SOUND4CNT_H	= 0x7c
+REG_SOUNDCNT_L		= 0x80
+REG_SOUND2CNT_H		= 0x82
 REG_SOUNDCNT_X		= 0x84
-REG_SGBIAS		= 0x88
-REG_SGWR0_L		= 0x90
+REG_SOUNDBIAS		= 0x88
+REG_WAVE_RAM0_L		= 0x90
 REG_FIFO_A_L	= 0xA0
 REG_FIFO_A_H	= 0xA2
 REG_FIFO_B_L	= 0xA4
@@ -71,19 +72,21 @@ REG_WAITCNT		= 0x204
 install_handler:
 	@r0 = address of interrupt handler
 	mov r1,#0x04000000
-	str r0,[r1,#-(0x04000000-0x03FFFFB0)]
+	str r0,[r1,#-(0x04000000-0x03FFFFB4)]
 	@install "my_irq"
 	adr r0,my_irq
-	str r0,[r1,#-(0x04000000-0x03FFFFB4)]
+	str r0,[r1,#-(0x04000000-0x03FFFFB8)]
 
 	ldr r0,=0xE5901200 @ldr r1,[r0,#REG_IE]
 	str r0,[r1,#-(0x04000000-0x03FFFFA0)]
 	ldr r0,=0xE3110801 @tst r1,#0x00010000
 	str r0,[r1,#-(0x04000000-0x03FFFFA4)]
-	ldr r0,=0x0510F050 @ldreq pc,[r0,#-0x50]
+	ldr r0,=0x03110201
 	str r0,[r1,#-(0x04000000-0x03FFFFA8)]
-	ldr r0,=0xE510F04C @ldr pc,[r0,#-0x4C]
+	ldr r0,=0x0510F04C @ldreq pc,[r0,#-0x50]
 	str r0,[r1,#-(0x04000000-0x03FFFFAC)]
+	ldr r0,=0xE510F048 @ldr pc,[r0,#-0x4C]
+	str r0,[r1,#-(0x04000000-0x03FFFFB0)]
 
 	@install tiny IRQ handler
 	ldr r0,=0x03007FA0
@@ -91,62 +94,151 @@ install_handler:
 	
 	bx lr
 my_irq:
+
+@new feature: use keyboard interrupt to try to stop game from detecting START
+@cases:
+
+@if L+R && START
+@	sleep
+@if L+R && IF && IE  (this can't happen)
+@if L+R && KEYINT off && IE off
+@	install key interrupt
+@	enable key interrupt
+@if L+R && KEYINT on && IE off
+@	can get here if game disabled key interrupt after we installed it
+@	check if it's ours
+@	if so, enable Key interrupt (not sure that it will work anyway)
+@if L+R && KEYINT off && IE on
+@	install key interrupt
+	
 	@r0 = reg_base
+	@r1 = REG_IE,REG_IF
 	ldr r2,[r0,#REG_P1]
-	tst r2,#0x0308			@check for L+R+start
-	ldrne pc,[r0,#-(0x04000000-0x03FFFFB0)] @to IRQ routine if not pressed
-	stmfd sp!,{lr}  @let's save old LR, set a new one, and let the interrupt handler finish
-	adr lr,my_irq1
-	ldr pc,[r0,#-(0x04000000-0x03FFFFB0)] @jump to IRQ handler
-my_irq1:
-	@goes here after IRQ handler finishes
+	tst r2,#0x0300	@L+R?
+	ldrne pc,[r0,#-(0x04000000-0x03FFFFB4)] @to IRQ routine if not pressed
+	tst r2,#0x0008	@Start?
+	beq sleep_now
+	@from here, there's no chance of Sleep happening...
+	
+	@r1 = REGIF...REGIE
+	@check if has a keyboard handler
+	tst r2,#0x40000000
+	bne has_keyint
+install_key_int:
+	mov r3,#0xC3000000		@interrupt on L+R+START
+	orr r3,r3,#0x00080000
+	str r3,[r0,#REG_P1]
+install_key_int_2:
+	orr r1,r1,#0x1000
+	add r2,r0,#REG_IE
+	strh r1,[r2]
+	ldr pc,[r0,#-(0x04000000-0x03FFFFB4)] @to normal IRQ routine
+has_keyint:
+	@is keyint ours?
+	bic r3,r2,#0xFF00
+	bic r3,r3,#0x00FF
+	ldr r12,=0xC3080000
+	cmp r3,r12
+	ldrne pc,[r0,#-(0x04000000-0x03FFFFB4)] @to normal IRQ routine
+	@if keyboard interrupt bit of reg_if someone got turned on...
+	tst r1,#0x10000000
+	beq install_key_int_2
+	mov r3,#0x1000
+	add r2,r0,#REG_IE
+	strh r3,[r2,#2]
+	b install_key_int_2
+sleep_now:
+	stmfd sp!,{r4-r11,lr}
+	add r1,r0,#REG_SOUND1CNT_L
+	@copy and push 32 bytes
+	ldmia r1!,{r2-r9}
+	stmfd sp!,{r2-r9}
+	@copy and push 32 bytes
+	ldmia r1!,{r2-r9}
+	stmfd sp!,{r2-r9}
+	@r3 = contents of REG_SOUND3CNT_X
+
 
 	@save old io values
-	stmfd sp!,{r4-r7}
-	mov r0,#REG_BASE
-	ldr r4,[r0,#REG_IE]
+	add r1,r0,#REG_IE
+	ldrh r4,[r1]
 	ldr r5,[r0,#REG_P1]
-	ldrh r6,[r0,#REG_SOUNDCNT_X]
-	ldrh r7,[r0,#REG_DISPCNT]
+	ldrh r6,[r0,#REG_DISPCNT]
 	
 	@enable ints on Keypad, Game Pak
-	@acknowoledge Vblank
-	mov r3,#0x00013000
-	str r3,[r0,#REG_IE]
-	mov r3,#0xC0000000		@interrupt on start+sel
-	orr r3,r3,#0x000C0000
-	str r3,[r0,#REG_P1]
-	strh r0,[r0,#REG_SOUNDCNT_X]	@sound off
-	orr r3,r6,#0x80
-	strh r3,[r0,#REG_DISPCNT]	@LCD off
-	swi 0x030000
-	mov r0,#REG_BASE
-	mov r1,#0
+	ldr r1,=0xFFFF3000
 	str r1,[r0,#REG_IE]
+	mov r1,#0xC0000000		@interrupt on start+sel
+	orr r1,r1,#0x000C0000
+	str r1,[r0,#REG_P1]
+	strh r0,[r0,#REG_SOUNDCNT_X]	@sound off
+	orr r1,r6,#0x80
+	strh r1,[r0,#REG_DISPCNT]	@LCD off
+	
+	swi 0x030000
+
 	@Loop to wait for letting go of Sel+start
 loop:
+	mov r0,#REG_BASE
 	ldr r1,[r0,#REG_P1]
 	and r1,r1,#0x000C
 	cmp r1,#0x000C
 	bne loop
-	mvn r1,#0
-	@acknowledge all interrupts
-	str r1,[r0,#REG_IE]
+	
+	@spin until VCOUNT==159
+spin2:
+	ldrh r1,[r0,#REG_VCOUNT]
+	cmp r1,#159
+	bne spin2
+	@spin until VCOUNT==160
+spin4:
+	ldrh r1,[r0,#REG_VCOUNT]
+	cmp r1,#160
+	bne spin4
+	@spin until VCOUNT==159
+spin5:
+	ldrh r1,[r0,#REG_VCOUNT]
+	cmp r1,#159
+	bne spin5
+	@spin until VCOUNT==160
+spin6:
+	ldrh r1,[r0,#REG_VCOUNT]
+	cmp r1,#160
+	bne spin6
+	@spin until VCOUNT==159
+spin7:
+	ldrh r1,[r0,#REG_VCOUNT]
+	cmp r1,#159
+	bne spin7
+	
 	@restore interrupts
-	str r4,[r0,#REG_IE]
+	add r1,r0,#REG_IE
+	strh r4,[r1]
 	@restore joystick interrupt
 	str r5,[r0,#REG_P1]
-	@restore sound state
-	strh r6,[r0,#REG_SOUNDCNT_X]
-	@restore screen
-	strh r7,[r0,#REG_DISPCNT]
+	mov r4,#0x1000 @clear the damn joystick interrupt
+	strh r4,[r1,#2]
 	
-	ldmfd sp!,{r4-r7}
-	ldmfd sp!,{pc}
-@	ldr pc,[r0,#-(0x04000000-0x03FFFFB0)] @to IRQ routine
+	@restore screen
+	strh r6,[r0,#REG_DISPCNT]
+	ldmfd sp!,{r2-r9}	
+	@restore sound state
+	str r3,[r0,#REG_SOUNDCNT_X]
+	add r1,r0,#0x80
+	stmia r1!,{r2-r9}
+	add r1,r0,#0x60
+	ldmfd sp!,{r2-r9}
+	stmia r1!,{r2-r9}
+	ldmfd sp!,{r4-r11,lr}	
+	@spin until VCOUNT==160, triggers next vblank
+spin3:
+	ldrh r1,[r0,#REG_VCOUNT]
+	cmp r1,#160
+	bne spin3  @<insert ytmnd cliche here>
+@all done!
+	ldr pc,[r0,#-(0x04000000-0x03FFFFB4)] @to IRQ routine
 
-
-@invocation:
+@invocation:  (these are added by the patcher tool)
 @stmfd sp!,{r0,r1,r12,lr}
 @mov r12,rA
 @mov r1,rB

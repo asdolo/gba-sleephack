@@ -49,6 +49,16 @@ These are the default button combinations:
 | - | - | - |
 | `A+B+Select+Start` | `L+R+Select` | `Select+Start+B` |
 
+# Disabling one of the patches
+
+By default, `patch.bin` comes with both Sleep and Hard Reset patches applied. You can disable one of them by replacing one of the *branch* instructions with a *no-operation* instruction and rebuilding the `patch.bin` file. Check the [Build instructions](#build-instructions) to do so.
+
+| - | Yes |  No |
+| - | - | - |
+| Want both Sleep and Hard Reset patches? | Don't change anything 😛 | Keep reading |
+| Want Sleep patch only? | Replace `beq reset_now` with `nop` at line `125` | Keep reading |
+| Want Hard Reset patch only? | Replace `beq sleep_now` with `nop` at line `120` |  You want nothing! Don't use this patch at all 😛 |
+
 # Build instructions
 
 The `patch.s` file is a file containing assembly code for ARM which will run on the GBA/emulator. You need to compile it into raw bytes so the ARM CPU that's inside the GBA is able to execute it. For this we will use `devkitARM` from `devkitPro`.

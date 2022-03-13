@@ -1,9 +1,25 @@
 # About
 This is a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (assembly patch code only, not the patcher tool) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations, as well as a configurable Hard Reset patch.
 
+These are the default button combinations:
+
+| Sleep | Wake-up | Hard Reset |
+| - | - | - |
+| `A+B+Select+Start` | `L+R+Select` | `Select+Start+B` |
+
+# Patching instructions
+
+Download `sleephack.zip` from [Dwedit's sleephack post](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (the second one, which is Release #2) and replace their `patch.bin` with the one from this repository. Then patch the ROM by running the following command on a `cmd` or a `PowerShell` terminal:
+
+```bash
+sleephack <input_file.gba> <output_file.gba>
+```
+
 # Configure button combinations
 
-To change the button combinations you'll have to build your own bitmask by checking the following table:
+To change the button combinations you have to rebuild the `patch.bin` file. Check the [Build instructions](#build-instructions) to do so.
+
+You have to build your own bitmask by checking the following table:
 | Bitmask | Button |
 | - | - |
 | `00 0000 0001` | A |

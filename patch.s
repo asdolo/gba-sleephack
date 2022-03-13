@@ -81,6 +81,7 @@ REG_WAITCNT		= 0x204
 
 SLEEP_BUTTON_MASK				= 0b0000001111	@ A+B+Select+Start
 WAKE_UP_BUTTON_MASK			= 0b1100000100	@ L+R+Select
+HARD_RESET_BUTTON_MASK	= 0b0000001110	@ Select+Start+B
 
 install_handler:
 	@r0 = address of interrupt handler
@@ -117,9 +118,17 @@ my_irq:
 	tst r2,r3												@ Check if the sleep buttons are pressed
 	pop {r3}												@ Restore r3
 	beq sleep_now										@ Do sleep if the sleep buttons are pressed
-	
-	@ No sleep combo pressed. Go back to the IRQ routine
+	push {r3}												@ Save r3 just in case
+	ldr r3,=HARD_RESET_BUTTON_MASK	@ Hard reset button mask (Start+Select+B)
+	tst r2,r3												@ Check if the hard reset buttons are pressed
+	pop {r3}												@ Restore r3
+	beq reset_now										@ Do hard reset if the hard reset buttons are pressed
+
+	@ No sleep or reset button combo pressed. Go back to the IRQ routine
 	ldr pc,[r0,#-(0x04000000-0x03FFFFB4)]
+	
+reset_now:
+	swi 0x260000
 	
 sleep_now:
 	stmfd sp!,{r4-r11,lr}

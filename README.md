@@ -1,5 +1,5 @@
 # About
-This is a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (assembly patch code only, not the patcher tool) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations.
+This is a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (assembly patch code only, not the patcher tool) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations, as well as a configurable Hard Reset patch.
 
 # Configure button combinations
 
@@ -19,12 +19,19 @@ To change the button combinations you'll have to build your own bitmask by check
 
 For example, `A+B+Right` would be `00 0001 0011`, and `Select+Start+R` would be `01 0000 1100`.
 
-Just change the bitmasks defined at lines 82 and 83 on `patch.s` with your custom ones. By default, buttons combinations are `A+B+Select+Start` for Sleeping and `L+R+Select` for Waking-up.
+Just change the bitmasks defined at lines 82, 83 and 84 on `patch.s` with your custom ones.
 
 ```asm
-SLEEP_BUTTON_MASK		= 0b0000001111	@ A+B+Select+Start
-WAKE_UP_BUTTON_MASK		= 0b1100000100	@ L+R+Select
+SLEEP_BUTTON_MASK	= 0b0000001111	@ A+B+Select+Start
+WAKE_UP_BUTTON_MASK	= 0b1100000100	@ L+R+Select
+HARD_RESET_BUTTON_MASK	= 0b0000001110	@ Select+Start+B
 ```
+
+These are the default button combinations:
+
+| Sleep | Wake-up | Hard Reset |
+| - | - | - |
+| `A+B+Select+Start` | `L+R+Select` | `Select+Start+B` |
 
 # Build instructions
 

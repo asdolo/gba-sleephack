@@ -68,6 +68,19 @@ REG_P1			= 0x130
 REG_P1CNT		= 0x132
 REG_WAITCNT		= 0x204
 
+@ #0b0000000001	@ A
+@ #0b0000000010	@ B
+@ #0b0000000100	@ SELECT
+@ #0b0000001000	@ START
+@ #0b0000010000	@ RIGHT
+@ #0b0000100000	@ LEFT
+@ #0b0001000000	@ UP
+@ #0b0010000000	@ DOWN
+@ #0b0100000000	@ R
+@ #0b1000000000	@ L
+
+SLEEP_BUTTON_MASK				= 0b0000001111	@ A+B+Select+Start
+WAKE_UP_BUTTON_MASK			= 0b1100000100	@ L+R+Select
 
 install_handler:
 	@r0 = address of interrupt handler
@@ -95,58 +108,19 @@ install_handler:
 	bx lr
 my_irq:
 
-@new feature: use keyboard interrupt to try to stop game from detecting START
-@cases:
-
-@if L+R && START
-@	sleep
-@if L+R && IF && IE  (this can't happen)
-@if L+R && KEYINT off && IE off
-@	install key interrupt
-@	enable key interrupt
-@if L+R && KEYINT on && IE off
-@	can get here if game disabled key interrupt after we installed it
-@	check if it's ours
-@	if so, enable Key interrupt (not sure that it will work anyway)
-@if L+R && KEYINT off && IE on
-@	install key interrupt
 	
 	@r0 = reg_base
 	@r1 = REG_IE,REG_IF
-	ldr r2,[r0,#REG_P1]
-	tst r2,#0x0300	@L+R?
-	ldrne pc,[r0,#-(0x04000000-0x03FFFFB4)] @to IRQ routine if not pressed
-	tst r2,#0x0008	@Start?
-	beq sleep_now
-	@from here, there's no chance of Sleep happening...
+	ldr r2,[r0,#REG_P1]							@ Load current pressed buttons on r2
+	push {r3}												@ Save r3 just in case
+	ldr r3,=SLEEP_BUTTON_MASK				@ Sleep button mask (A+B+Select+Start)
+	tst r2,r3												@ Check if the sleep buttons are pressed
+	pop {r3}												@ Restore r3
+	beq sleep_now										@ Do sleep if the sleep buttons are pressed
 	
-	@r1 = REGIF...REGIE
-	@check if has a keyboard handler
-	tst r2,#0x40000000
-	bne has_keyint
-install_key_int:
-	mov r3,#0xC3000000		@interrupt on L+R+START
-	orr r3,r3,#0x00080000
-	str r3,[r0,#REG_P1]
-install_key_int_2:
-	orr r1,r1,#0x1000
-	add r2,r0,#REG_IE
-	strh r1,[r2]
-	ldr pc,[r0,#-(0x04000000-0x03FFFFB4)] @to normal IRQ routine
-has_keyint:
-	@is keyint ours?
-	bic r3,r2,#0xFF00
-	bic r3,r3,#0x00FF
-	ldr r12,=0xC3080000
-	cmp r3,r12
-	ldrne pc,[r0,#-(0x04000000-0x03FFFFB4)] @to normal IRQ routine
-	@if keyboard interrupt bit of reg_if someone got turned on...
-	tst r1,#0x10000000
-	beq install_key_int_2
-	mov r3,#0x1000
-	add r2,r0,#REG_IE
-	strh r3,[r2,#2]
-	b install_key_int_2
+	@ No sleep combo pressed. Go back to the IRQ routine
+	ldr pc,[r0,#-(0x04000000-0x03FFFFB4)]
+	
 sleep_now:
 	stmfd sp!,{r4-r11,lr}
 	add r1,r0,#REG_SOUND1CNT_L
@@ -168,23 +142,32 @@ sleep_now:
 	@enable ints on Keypad, Game Pak
 	ldr r1,=0xFFFF3000
 	str r1,[r0,#REG_IE]
-	mov r1,#0xC0000000		@interrupt on start+sel
-	orr r1,r1,#0x000C0000
+	mov r1,#0xC0000000
+	push {r3}										@ Save r3 just in case
+	ldr r3,=WAKE_UP_BUTTON_MASK	@ Wake-up button mask (Select+L+R)
+	lsl r3,#16
+	orr r1,r1,r3
+	pop {r3}										@ Restore r3
 	str r1,[r0,#REG_P1]
 	strh r0,[r0,#REG_SOUNDCNT_X]	@sound off
 	orr r1,r6,#0x80
 	strh r1,[r0,#REG_DISPCNT]	@LCD off
 	
-	swi 0x030000
+	swi 0x030000								@ A mimir :P
 
-	@Loop to wait for letting go of Sel+start
+	@ Wake-up from here
+
+	push {r3}										@ Save r3 just in case
+	ldr r3,=WAKE_UP_BUTTON_MASK	@ Wake-up button mask (Yes, again) (Select+L+R)
+
+	@Loop to wait for letting go the wake-up buttons
 loop:
 	mov r0,#REG_BASE
-	ldr r1,[r0,#REG_P1]
-	and r1,r1,#0x000C
-	cmp r1,#0x000C
-	bne loop
-	
+	ldr r1,[r0,#REG_P1]					@ Load pressed buttons into r1
+	tst r1,r3										@ Check if the wake-up buttons are pressed
+	bne loop										@ Not pressed, check again
+
+	@ Wake-up buttons pressed, wait for a release
 	@spin until VCOUNT==159
 spin2:
 	ldrh r1,[r0,#REG_VCOUNT]
@@ -211,6 +194,9 @@ spin7:
 	cmp r1,#159
 	bne spin7
 	
+	@ Wake-up buttons released
+	pop {r3}
+
 	@restore interrupts
 	add r1,r0,#REG_IE
 	strh r4,[r1]

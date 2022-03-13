@@ -1,5 +1,30 @@
 # About
-This is a mirror of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (assembly patch code only, not the patcher tool).
+This is a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (assembly patch code only, not the patcher tool) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations.
+
+# Configure button combinations
+
+To change the button combinations you'll have to build your own bitmask by checking the following table:
+| Bitmask | Button |
+| - | - |
+| `00 0000 0001` | A |
+| `00 0000 0010` | B |
+| `00 0000 0100` | Select |
+| `00 0000 1000` | Start |
+| `00 0001 0000` | Right |
+| `00 0010 0000` | Left |
+| `00 0100 0000` | Up |
+| `00 1000 0000` | Down |
+| `01 0000 0000` | R |
+| `10 0000 0000` | L |
+
+For example, `A+B+Right` would be `00 0001 0011`, and `Select+Start+R` would be `01 0000 1100`.
+
+Just change the bitmasks defined at lines 82 and 83 on `patch.s` with your custom ones. By default, buttons combinations are `A+B+Select+Start` for Sleeping and `L+R+Select` for Waking-up.
+
+```asm
+SLEEP_BUTTON_MASK		= 0b0000001111	@ A+B+Select+Start
+WAKE_UP_BUTTON_MASK		= 0b1100000100	@ L+R+Select
+```
 
 # Build instructions
 
@@ -27,12 +52,6 @@ Make sure to add the `devkitARM/bin` directory to the `PATH` environment variabl
 arm-none-eabi-as patch.s -o patch.o
 arm-none-eabi-objcopy -O binary patch.o patch.bin
 ```
-
-# Changelog
-## Release #2
-- Fixed mistake which made it fail to patch Lufia
-- Sound is corrected after waking up
-- Now hides the Start button from the game when activating sleep mode
 
 # Credits
 

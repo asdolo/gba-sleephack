@@ -1,5 +1,7 @@
 # About
-This is a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (assembly patch code only, not the patcher tool) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations, as well as a configurable Hard Reset patch.
+This is a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations, as well as a configurable Hard Reset patch. This also includes a port of the patcher tool to .NET Standard with some modifications from the original one from Dwedit's post.
+
+**⚠️ This README file only contains information about the patch itself. For more information about the patcher tool please check [this other README file](patcher/README.md).**
 
 These are the default button combinations:
 

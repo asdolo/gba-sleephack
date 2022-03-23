@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "patcher-tool", "patcher-tool\patcher-tool.csproj", "{9D784B2A-EF64-46D3-9817-73157F7F1365}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "patcher-lib", "patcher-lib\patcher-lib.csproj", "{883DD877-59A1-4B6A-8832-6BFEAEF79563}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9D784B2A-EF64-46D3-9817-73157F7F1365}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D784B2A-EF64-46D3-9817-73157F7F1365}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D784B2A-EF64-46D3-9817-73157F7F1365}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D784B2A-EF64-46D3-9817-73157F7F1365}.Release|Any CPU.Build.0 = Release|Any CPU
+		{883DD877-59A1-4B6A-8832-6BFEAEF79563}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{883DD877-59A1-4B6A-8832-6BFEAEF79563}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{883DD877-59A1-4B6A-8832-6BFEAEF79563}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{883DD877-59A1-4B6A-8832-6BFEAEF79563}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

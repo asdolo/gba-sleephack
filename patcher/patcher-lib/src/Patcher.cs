@@ -10,16 +10,18 @@ public class Patcher
 
     private const uint AGB_INTERRUPTION_HANDLER_LOCATION_ADDRESS = 0x03007FFC;
 
-    public Patcher(byte[] romBinary, byte[] patchBinary, uint patchAddress)
+    public Patcher(byte[] romBinary, byte[] sleepPatchBinary)
     {
         ROMBinary = romBinary;
-        PatchBinary = patchBinary;
-        PatchAddress = patchAddress;
+        SleepPatchBinary = sleepPatchBinary;
+        
+        // We start with a dummy patch address. We'll find a real one later...
+        PatchAddress = DUMMY_DATA;
     }
 
     private byte[] ROMBinary { get; }
-    private byte[] PatchBinary { get; }
-    private uint PatchAddress { get; }
+    private byte[] SleepPatchBinary { get; }
+    private uint PatchAddress { get; set; }
 
     private int GetROMSize()
     {
@@ -38,37 +40,80 @@ public class Patcher
 
     public byte[] Patch()
     {
+        // We need to find a suitable address in the ROM to inject both sleep patch and activation routines
+        var address = FindSuitablePatchAddress();
+        
+        PatchAddress = (uint) address;
+
         var romBytesSpan = ROMBinary.AsSpan();
 
         // Add first Activation Patch just after the Sleep Patch
-        var lastActivationPatchAddress = PatchAddress + PatchBinary.Length;
+        var lastActivationPatchAddress = PatchAddress + SleepPatchBinary.Length;
 
         var romInstructionCount = GetROMWordCount();
         var activationPatchesData = new List<ActivationPatchData>();
         activationPatchesData.AddRange(GetActivationPatchesData(romInstructionCount, romBytesSpan,
             ref lastActivationPatchAddress, false));
 
-        //YAY now for THUMB version!
+        // YAY now for THUMB version!
         romInstructionCount = GetROMHalfWordCount();
         activationPatchesData.AddRange(GetActivationPatchesData(romInstructionCount, romBytesSpan,
             ref lastActivationPatchAddress, true));
 
         // Apply all patches
 
-        var patchedROMSize = GetPatchedROMSize(activationPatchesData);
+        var patchedROMSize = CalculatePatchedROMSize(activationPatchesData);
         var patchedROM = new byte[patchedROMSize];
 
         // Copy original ROM in the patched ROM bytes array
         Array.Copy(ROMBinary, 0, patchedROM, 0, GetROMSize());
 
         // Copy sleep patch to the indicated address in the patched ROM
-        Array.Copy(PatchBinary, 0, patchedROM, PatchAddress, PatchBinary.Length);
+        Array.Copy(SleepPatchBinary, 0, patchedROM, PatchAddress, SleepPatchBinary.Length);
 
         // Apply every activation patch to the patched ROM
         activationPatchesData.ForEach(activationPatchData => activationPatchData.ApplyTo(patchedROM));
 
 
         return patchedROM;
+    }
+
+    private int FindSuitablePatchAddress()
+    {
+        // A suitable address is any address in which we could fit the whole patch,
+        // so first we need to know the whole size of the patches
+
+        // We know the size of the sleep patch, and how long is an activation routine, but we don't know
+        // how many activation routines we are going to inject if we don't scan the ROM first
+
+        // So... let's calculate the total size of all the activation routines we'll inject
+        var dummyAddress = (long) DUMMY_DATA;
+        var activationPatchesSize =
+            GetActivationPatchesData(GetROMWordCount(), ROMBinary.AsSpan(), ref dummyAddress, false)
+                .Select(patchData => patchData.Patch.Length)
+                .Sum() +
+            GetActivationPatchesData(GetROMHalfWordCount(), ROMBinary.AsSpan(), ref dummyAddress, true)
+                .Select(patchData => patchData.Patch.Length)
+                .Sum();
+
+        var totalPatchesSize = SleepPatchBinary.Length + activationPatchesSize;
+
+        // Expand to next multiple of four words.
+        totalPatchesSize = Utils.RoundUp(totalPatchesSize, 4 * ARM_WORD_SIZE);
+
+        // With the total size of all the patches we can now scan the ROM for a suitable location to fit the whole thing
+        try
+        {
+            return EmptyDataAddressFinder.For(ROMBinary).FindWithSize(totalPatchesSize);
+        }
+        catch (Exception e)
+        {
+            if (totalPatchesSize <= AGB_ROM_MAX_SIZE - GetROMSize())
+                // Add patches to the end of the ROM
+                return GetROMSize();
+            
+            throw new Exception("Could not find a suitable location in the ROM to inject the sleep patch.");
+        }
     }
 
     private IEnumerable<ActivationPatchData> GetActivationPatchesData(int romInstructionCount, Span<byte> romBytesSpan,
@@ -179,11 +224,11 @@ public class Patcher
         return activationPatchesData;
     }
 
-    private int GetPatchedROMSize(List<ActivationPatchData> activationPatchesData)
+    private int CalculatePatchedROMSize(List<ActivationPatchData> activationPatchesData)
     {
         var patchedROMSize = GetROMSize();
 
-        patchedROMSize = (int) Math.Max(patchedROMSize, PatchAddress + PatchBinary.Length);
+        patchedROMSize = (int) Math.Max(patchedROMSize, PatchAddress + SleepPatchBinary.Length);
 
         activationPatchesData.ForEach(activationPatchData =>
         {
@@ -209,6 +254,6 @@ public class Patcher
 
     public bool PatchIsValid()
     {
-        return ROMBinary.Length % ARM_WORD_SIZE == 0;
+        return GetROMSize() % ARM_WORD_SIZE == 0;
     }
 }

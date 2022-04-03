@@ -6,20 +6,19 @@ public static class Program
     {
         var argCount = args.Length;
 
-        if (argCount != 3)
+        if (argCount != 2)
         {
-            Console.WriteLine("syntax: <input file path> <output file path> <patch address>");
+            Console.WriteLine("syntax: <input file path> <output file path>");
             return 1;
         }
 
         var inputFilePath = args[0];
         var outputFilePath = args[1];
-        var patchAddress = Convert.ToUInt32(args[2]);
 
         var rom = File.ReadAllBytes(inputFilePath);
-        var patch = File.ReadAllBytes("patch.bin");
+        var sleepPatch = File.ReadAllBytes("patch.bin");
 
-        var patcher = new Patcher(rom, patch, patchAddress);
+        var patcher = new Patcher(rom, sleepPatch);
 
         if (!patcher.PatchIsValid()) throw new ArgumentException("Patch file is not valid!");
 

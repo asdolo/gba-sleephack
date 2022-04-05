@@ -79,8 +79,8 @@ REG_WAITCNT		= 0x204
 @ #0b0100000000	@ R
 @ #0b1000000000	@ L
 
-SLEEP_BUTTON_MASK				= 0b0000001111	@ A+B+Select+Start
-WAKE_UP_BUTTON_MASK			= 0b1100000100	@ L+R+Select
+SLEEP_BUTTON_MASK		= 0b0000001111	@ A+B+Select+Start
+WAKE_UP_BUTTON_MASK		= 0b1100000100	@ L+R+Select
 HARD_RESET_BUTTON_MASK	= 0b0000001110	@ Select+Start+B
 
 install_handler:
@@ -112,17 +112,21 @@ my_irq:
 	
 	@r0 = reg_base
 	@r1 = REG_IE,REG_IF
-	ldr r2,[r0,#REG_P1]							@ Load current pressed buttons on r2
-	push {r3}												@ Save r3 just in case
-	ldr r3,=SLEEP_BUTTON_MASK				@ Sleep button mask (A+B+Select+Start)
-	tst r2,r3												@ Check if the sleep buttons are pressed
-	pop {r3}												@ Restore r3
-	beq sleep_now										@ Do sleep if the sleep buttons are pressed
-	push {r3}												@ Save r3 just in case
-	ldr r3,=HARD_RESET_BUTTON_MASK	@ Hard reset button mask (Start+Select+B)
-	tst r2,r3												@ Check if the hard reset buttons are pressed
-	pop {r3}												@ Restore r3
-	beq reset_now										@ Do hard reset if the hard reset buttons are pressed
+	ldr r2,[r0,#REG_P1]					@ Load current pressed buttons on r2
+	push {r3,r4}						@ Save r3 and r4 just in case
+	ldr r3,=SLEEP_BUTTON_MASK			@ Sleep button mask (A+B+Select+Start)
+	ldr r4,=0x03FF
+	eor r3,r3,r4                        
+	cmp r2,r3							@ Check if the sleep buttons are pressed
+	pop {r3,r4}							@ Restore r3
+	beq sleep_now						@ Do sleep if the sleep buttons are pressed
+	push {r3,r4}						@ Save r3 just in case
+	ldr r3,=HARD_RESET_BUTTON_MASK      @ Hard reset button mask (Start+Select+B)
+	ldr r4,=0x03FF
+	eor r3,r3,r4
+	cmp r2,r3							@ Check if the hard reset buttons are pressed
+	pop {r3,r4}							@ Restore r3
+	beq reset_now						@ Do hard reset if the hard reset buttons are pressed
 
 	@ No sleep or reset button combo pressed. Go back to the IRQ routine
 	ldr pc,[r0,#-(0x04000000-0x03FFFFB4)]
@@ -152,29 +156,29 @@ sleep_now:
 	ldr r1,=0xFFFF3000
 	str r1,[r0,#REG_IE]
 	mov r1,#0xC0000000
-	push {r3}										@ Save r3 just in case
-	ldr r3,=WAKE_UP_BUTTON_MASK	@ Wake-up button mask (Select+L+R)
+	push {r3}							@ Save r3 just in case
+	ldr r3,=WAKE_UP_BUTTON_MASK         @ Wake-up button mask (Select+L+R)
 	lsl r3,#16
 	orr r1,r1,r3
-	pop {r3}										@ Restore r3
+	pop {r3}							@ Restore r3
 	str r1,[r0,#REG_P1]
-	strh r0,[r0,#REG_SOUNDCNT_X]	@sound off
+	strh r0,[r0,#REG_SOUNDCNT_X]        @sound off
 	orr r1,r6,#0x80
 	strh r1,[r0,#REG_DISPCNT]	@LCD off
 	
-	swi 0x030000								@ A mimir :P
+	swi 0x030000						@ A mimir :P
 
 	@ Wake-up from here
 
-	push {r3}										@ Save r3 just in case
-	ldr r3,=WAKE_UP_BUTTON_MASK	@ Wake-up button mask (Yes, again) (Select+L+R)
+	push {r3}							@ Save r3 just in case
+	ldr r3,=WAKE_UP_BUTTON_MASK         @ Wake-up button mask (Yes, again) (Select+L+R)
 
 	@Loop to wait for letting go the wake-up buttons
 loop:
 	mov r0,#REG_BASE
 	ldr r1,[r0,#REG_P1]					@ Load pressed buttons into r1
-	tst r1,r3										@ Check if the wake-up buttons are pressed
-	bne loop										@ Not pressed, check again
+	tst r1,r3							@ Check if the wake-up buttons are pressed
+	bne loop							@ Not pressed, check again
 
 	@ Wake-up buttons pressed, wait for a release
 	@spin until VCOUNT==159

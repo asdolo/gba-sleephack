@@ -1,4 +1,4 @@
-using GBA.Sleephack;
+﻿using GBA.Sleephack;
 
 public static class Program
 {
@@ -6,9 +6,10 @@ public static class Program
     {
         var argCount = args.Length;
 
-        if (argCount != 2)
+        if (argCount != 5)
         {
-            Console.WriteLine("syntax: <input file path> <output file path>");
+            Console.WriteLine("syntax: <input file path> <output file path> <sleep button combination> <wake button combination> <hard reset button combination>");
+            Console.WriteLine("example: gba-sleephack-patcher-tool.exe input.gba output.gba \"L+R+Select\" \"Select+Start\" \"L+R+Select+Start\"");
             return 1;
         }
 
@@ -17,7 +18,13 @@ public static class Program
 
         var romBinary = File.ReadAllBytes(inputFilePath);
 
-        var patcher = new Patcher(romBinary);
+        var buttonsArgParser = new ButtonsParser();
+
+        var sleepButtonCombination = buttonsArgParser.Parse(args[2]);
+        var wakeUpButtonCombination = buttonsArgParser.Parse(args[3]);
+        var hardResetButtonCombination = buttonsArgParser.Parse(args[4]);
+
+        var patcher = new Patcher(romBinary, sleepButtonCombination, wakeUpButtonCombination, hardResetButtonCombination);
 
         if (!patcher.PatchIsValid()) throw new ArgumentException("Patch file is not valid!");
 

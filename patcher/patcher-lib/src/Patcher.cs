@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using static GBA.Sleephack.Constants;
 
 namespace GBA.Sleephack;
@@ -36,14 +36,26 @@ public class Patcher
         0xFF, 0x03, 0x00, 0x00, 0xEB, 0x02, 0x00, 0x00, 0x00, 0x30, 0xFF, 0xFF, 0xAB, 0x03, 0x00, 0x00
     };
     private uint _patchAddress;
+    private readonly Buttons _sleepButtonCombination;
+    private readonly Buttons _wakeUpButtonCombination;
+    private readonly Buttons _hardResetButtonCombination;
+
     private const int ARM_REGISTERS_COUNT = 16;
     private const uint DUMMY_DATA = 0xDEADBEEF;
 
     private const uint AGB_INTERRUPTION_HANDLER_LOCATION_ADDRESS = 0x03007FFC;
+    private const uint PATCH_SLEEP_BUTTON_COMBO_OFFSET = 0x19C;
+    private const uint PATCH_WAKE_UP_BUTTON_COMBO_OFFSET = 0x1AC;
+    private const uint PATCH_HARD_RESET_BUTTON_COMBO_OFFSET = 0x1A4;
 
-    public Patcher(byte[] romBinary)
+    public Patcher(byte[] romBinary, Buttons sleepButtonCombination,
+        Buttons wakeUpButtonCombination, Buttons hardResetButtonCombination)
     {
         _romBinary = romBinary;
+        _sleepButtonCombination = sleepButtonCombination;
+        _wakeUpButtonCombination = wakeUpButtonCombination;
+        _hardResetButtonCombination = hardResetButtonCombination;
+
         // We start with a dummy patch address. We'll find a real one later...
         _patchAddress = DUMMY_DATA;
     }
@@ -92,6 +104,21 @@ public class Patcher
 
         // Copy original ROM in the patched ROM bytes array
         Array.Copy(_romBinary, 0, patchedROM, 0, GetROMSize());
+        
+        // Change button combinations for sleep, wake up and hard reset
+
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            _sleepPatchBinary.AsSpan()[(int) PATCH_SLEEP_BUTTON_COMBO_OFFSET..],
+            (uint) _sleepButtonCombination
+        );
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            _sleepPatchBinary.AsSpan()[(int) PATCH_WAKE_UP_BUTTON_COMBO_OFFSET..],
+            (uint) _wakeUpButtonCombination
+        );
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            _sleepPatchBinary.AsSpan()[(int) PATCH_HARD_RESET_BUTTON_COMBO_OFFSET..],
+            (uint) _hardResetButtonCombination
+        );
 
         // Copy sleep patch to the indicated address in the patched ROM
         Array.Copy(_sleepPatchBinary, 0, patchedROM, _patchAddress, _sleepPatchBinary.Length);

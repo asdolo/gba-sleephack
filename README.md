@@ -7,7 +7,7 @@ These are the default button combinations:
 
 | Sleep | Wake-up | Hard Reset |
 | - | - | - |
-| `A+B+Select+Start` | `L+R+Select` | `Select+Start+B` |
+| `L+R+Select` | `Select+Start` | `L+R+Select+Start` |
 
 # Patching instructions
 
@@ -40,16 +40,16 @@ For example, `A+B+Right` would be `00 0001 0011`, and `Select+Start+R` would be 
 Just change the bitmasks defined at lines 82, 83 and 84 on `patch.s` with your custom ones.
 
 ```asm
-SLEEP_BUTTON_MASK	= 0b0000001111	@ A+B+Select+Start
-WAKE_UP_BUTTON_MASK	= 0b1100000100	@ L+R+Select
-HARD_RESET_BUTTON_MASK	= 0b0000001110	@ Select+Start+B
+SLEEP_BUTTON_MASK		= 0b1100000100	@ L+R+Select
+WAKE_UP_BUTTON_MASK		= 0b0000001100	@ Select+Start
+HARD_RESET_BUTTON_MASK	= 0b1100001100	@ L+R+Select+Start
 ```
 
 These are the default button combinations:
 
 | Sleep | Wake-up | Hard Reset |
 | - | - | - |
-| `A+B+Select+Start` | `L+R+Select` | `Select+Start+B` |
+| `L+R+Select` | `Select+Start` | `L+R+Select+Start` |
 
 # Disabling one of the patches
 
@@ -59,7 +59,7 @@ By default, `patch.bin` comes with both Sleep and Hard Reset patches applied. Yo
 | - | - | - |
 | Want both Sleep and Hard Reset patches? | Don't change anything 😛 | Keep reading |
 | Want Sleep patch only? | Replace `beq reset_now` with `nop` at line `125` | Keep reading |
-| Want Hard Reset patch only? | Replace `beq sleep_now` with `nop` at line `120` |  You want nothing! Don't use this patch at all 😛 |
+| Want Hard Reset patch only? | Replace `beq sleep_now` with `nop` at line `120` |  You want nothing! Don't use this repository at all 😛 |
 
 # Build instructions
 
@@ -90,5 +90,5 @@ arm-none-eabi-objcopy -O binary patch.o patch.bin
 
 # Credits
 
-Dan Weiss (Dwedit)
+Original Sleephack by Dan Weiss (Dwedit)
 July 1, 2007

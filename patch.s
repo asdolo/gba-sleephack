@@ -79,9 +79,9 @@ REG_WAITCNT		= 0x204
 @ #0b0100000000	@ R
 @ #0b1000000000	@ L
 
-SLEEP_BUTTON_MASK		= 0b0000001111	@ A+B+Select+Start
-WAKE_UP_BUTTON_MASK		= 0b1100000100	@ L+R+Select
-HARD_RESET_BUTTON_MASK	= 0b0000001110	@ Select+Start+B
+SLEEP_BUTTON_MASK		= 0b1100000100	@ L+R+Select
+WAKE_UP_BUTTON_MASK		= 0b0000001100	@ Select+Start
+HARD_RESET_BUTTON_MASK	= 0b1100001100	@ L+R+Select+Start
 
 install_handler:
 	@r0 = address of interrupt handler
@@ -114,14 +114,14 @@ my_irq:
 	@r1 = REG_IE,REG_IF
 	ldr r2,[r0,#REG_P1]					@ Load current pressed buttons on r2
 	push {r3,r4}						@ Save r3 and r4 just in case
-	ldr r3,=SLEEP_BUTTON_MASK			@ Sleep button mask (A+B+Select+Start)
+	ldr r3,=SLEEP_BUTTON_MASK			@ Sleep button mask
 	ldr r4,=0x03FF
 	eor r3,r3,r4                        
 	cmp r2,r3							@ Check if the sleep buttons are pressed
 	pop {r3,r4}							@ Restore r3
 	beq sleep_now						@ Do sleep if the sleep buttons are pressed
 	push {r3,r4}						@ Save r3 just in case
-	ldr r3,=HARD_RESET_BUTTON_MASK      @ Hard reset button mask (Start+Select+B)
+	ldr r3,=HARD_RESET_BUTTON_MASK      @ Hard reset button mask
 	ldr r4,=0x03FF
 	eor r3,r3,r4
 	cmp r2,r3							@ Check if the hard reset buttons are pressed
@@ -157,7 +157,7 @@ sleep_now:
 	str r1,[r0,#REG_IE]
 	mov r1,#0xC0000000
 	push {r3}							@ Save r3 just in case
-	ldr r3,=WAKE_UP_BUTTON_MASK         @ Wake-up button mask (Select+L+R)
+	ldr r3,=WAKE_UP_BUTTON_MASK         @ Wake-up button mask
 	lsl r3,#16
 	orr r1,r1,r3
 	pop {r3}							@ Restore r3
@@ -171,7 +171,7 @@ sleep_now:
 	@ Wake-up from here
 
 	push {r3}							@ Save r3 just in case
-	ldr r3,=WAKE_UP_BUTTON_MASK         @ Wake-up button mask (Yes, again) (Select+L+R)
+	ldr r3,=WAKE_UP_BUTTON_MASK         @ Wake-up button mask
 
 	@Loop to wait for letting go the wake-up buttons
 loop:

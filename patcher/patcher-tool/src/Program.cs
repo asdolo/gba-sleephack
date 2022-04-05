@@ -1,4 +1,4 @@
-﻿using GBA.Sleephack;
+using GBA.Sleephack;
 
 public static class Program
 {
@@ -15,10 +15,9 @@ public static class Program
         var inputFilePath = args[0];
         var outputFilePath = args[1];
 
-        var rom = File.ReadAllBytes(inputFilePath);
-        var sleepPatch = File.ReadAllBytes("patch.bin");
+        var romBinary = File.ReadAllBytes(inputFilePath);
 
-        var patcher = new Patcher(rom, sleepPatch);
+        var patcher = new Patcher(romBinary);
 
         if (!patcher.PatchIsValid()) throw new ArgumentException("Patch file is not valid!");
 

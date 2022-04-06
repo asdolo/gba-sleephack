@@ -10,7 +10,6 @@ public static class Constants
     [Flags]
     public enum Buttons : uint
     {
-        NONE    = 0,
         A       = 1 << 0,
         B       = 1 << 1,
         SELECT  = 1 << 2,

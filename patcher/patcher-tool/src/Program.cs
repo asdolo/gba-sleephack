@@ -1,37 +1,68 @@
 ﻿using GBA.Sleephack;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Exceptions;
+using CliFx.Infrastructure;
 
 public static class Program
 {
-    public static int Main(string[] args)
+    [Command]
+    public class MainCommand : ICommand
     {
-        var argCount = args.Length;
+        [CommandParameter(0, Name = "Input file path")]
+        public string InputFilePath { get; init; }
+        
+        [CommandParameter(1, Name = "Output file path")]
+        public string OutputFilePath { get; init; }
 
-        if (argCount != 5)
+        [CommandOption("sleep-combo", Description = "Sleep buttons combination")]
+        public string SleepButtonCombination { get; init; } = "L+R+Select";
+
+        [CommandOption("wake-up-combo", Description = "Wake up buttons combination")]
+        public string WakeUpButtonCombination { get; init; } = "Select+Start";
+        
+        [CommandOption("hard-reset-combo", Description = "Hard reset buttons combination")]
+        public string HardResetButtonCombination { get; init; } = "L+R+Select+Start";
+        
+        public ValueTask ExecuteAsync(IConsole console)
         {
-            Console.WriteLine("syntax: <input file path> <output file path> <sleep button combination> <wake button combination> <hard reset button combination>");
-            Console.WriteLine("example: gba-sleephack-patcher-tool.exe input.gba output.gba \"L+R+Select\" \"Select+Start\" \"L+R+Select+Start\"");
-            return 1;
+            var romBinary = File.ReadAllBytes(InputFilePath);
+
+            var buttonsArgParser = new ButtonsParser();
+
+            try
+            {
+                var sleepButtonCombination = buttonsArgParser.Parse(SleepButtonCombination);
+                var wakeUpButtonCombination = buttonsArgParser.Parse(WakeUpButtonCombination);
+                var hardResetButtonCombination = buttonsArgParser.Parse(HardResetButtonCombination);
+                
+                var patcher = new Patcher(romBinary, sleepButtonCombination, wakeUpButtonCombination, hardResetButtonCombination);
+
+                var patchedROM = patcher.GetPatchedROM();
+                
+                File.WriteAllBytes(OutputFilePath, patchedROM);
+            }
+            catch (Exception ex)
+            {
+                throw new CommandException(ex.Message, 1);
+            }
+
+            console.Output.WriteLine($"Sleep button combination: {SleepButtonCombination}");
+            console.Output.WriteLine($"Wake up button combination: {WakeUpButtonCombination}");
+            console.Output.WriteLine($"Hard reset button combination: {HardResetButtonCombination}");
+            console.Output.WriteLine();
+
+            console.ForegroundColor = ConsoleColor.Green;
+            console.Output.WriteLine($"Done! Patched ROM saved as {OutputFilePath}");
+            console.ResetColor();
+
+            return ValueTask.CompletedTask;
         }
-
-        var inputFilePath = args[0];
-        var outputFilePath = args[1];
-
-        var romBinary = File.ReadAllBytes(inputFilePath);
-
-        var buttonsArgParser = new ButtonsParser();
-
-        var sleepButtonCombination = buttonsArgParser.Parse(args[2]);
-        var wakeUpButtonCombination = buttonsArgParser.Parse(args[3]);
-        var hardResetButtonCombination = buttonsArgParser.Parse(args[4]);
-
-        var patcher = new Patcher(romBinary, sleepButtonCombination, wakeUpButtonCombination, hardResetButtonCombination);
-
-        if (!patcher.PatchIsValid()) throw new ArgumentException("Patch file is not valid!");
-
-        var patchedROM = patcher.Patch();
-
-        File.WriteAllBytes(outputFilePath, patchedROM);
-
-        return 0;
     }
+
+    public static async Task<int> Main() =>
+        await new CliApplicationBuilder()
+            .AddCommandsFromThisAssembly()
+            .Build()
+            .RunAsync();
 }

@@ -13,4 +13,8 @@
       <ProjectReference Include="..\patcher-lib\patcher-lib.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="CliFx" Version="2.2.2" />
+    </ItemGroup>
+
 </Project>

@@ -1,4 +1,5 @@
 ﻿using System.Buffers.Binary;
+using System.Diagnostics;
 using static GBA.Sleephack.Constants;
 
 namespace GBA.Sleephack;
@@ -75,7 +76,7 @@ public class Patcher
         return GetROMSize() / ARM_HALF_WORD_SIZE;
     }
 
-    public byte[] Patch()
+    public byte[] GetPatchedROM()
     {
         // We need to find a suitable address in the ROM to inject both sleep patch and activation routines
         var address = FindSuitablePatchAddress();
@@ -158,7 +159,7 @@ public class Patcher
         {
             return EmptyDataAddressFinder.For(_romBinary).FindWithSize(totalPatchesSize);
         }
-        catch (Exception e)
+        catch
         {
             if (totalPatchesSize <= AGB_ROM_MAX_SIZE - GetROMSize())
                 // Add patches to the end of the ROM
@@ -263,12 +264,12 @@ public class Patcher
 
                 lastActivationPatchAddress += activationPatchBinary.Length;
 
-                Console.WriteLine("Patched an interrupt installer!");
-                Console.WriteLine(
+                Debug.WriteLine("Patched an interrupt installer!");
+                Debug.WriteLine(
                     $"@0x{lastLDRInstructionAddress[sourceRegister]:X8}: r{sourceRegister}=0x{lastDataReadToR[sourceRegister]:X8}");
-                Console.WriteLine(
+                Debug.WriteLine(
                     $"@0x{lastLDRInstructionAddress[baseRegister]:X8}: r{baseRegister}=0x{lastDataReadToR[baseRegister]:X8}");
-                Console.WriteLine(
+                Debug.WriteLine(
                     $"@0x{instructionAddress:X8}: str r{sourceRegister},[r{baseRegister}]");
             }
         }
@@ -302,10 +303,5 @@ public class Patcher
             return (address & 0x03) == 0x00;
 
         return address % ARM_WORD_SIZE == 0x00;
-    }
-
-    public bool PatchIsValid()
-    {
-        return GetROMSize() % ARM_WORD_SIZE == 0;
     }
 }

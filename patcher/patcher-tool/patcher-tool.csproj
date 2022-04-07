@@ -9,6 +9,10 @@
         <AssemblyName>gba-sleephack-patcher-tool</AssemblyName>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+
     <ItemGroup>
       <ProjectReference Include="..\patcher-lib\patcher-lib.csproj" />
     </ItemGroup>

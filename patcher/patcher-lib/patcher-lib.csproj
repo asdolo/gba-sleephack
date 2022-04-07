@@ -8,4 +8,8 @@
         <AssemblyName>gba-sleephack-patcher-lib</AssemblyName>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+
 </Project>

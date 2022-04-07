@@ -1,69 +1,72 @@
 # About
-This is a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations, as well as a configurable Hard Reset patch. This also includes a port of the patcher tool to .NET Standard with some modifications from the original one from Dwedit's post.
+This is a Sleep Patch & Hard Reset patching tool for GBA ROMs.
 
-**⚠️ This README file only contains information about the patch itself. For more information about the patcher tool please check [this other README file](patcher/README.md).**
+The assembly code of the patch itself is on `patch.s`, and it's a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations, as well as a configurable Hard Reset patch.
 
-These are the default button combinations:
+# Usage
 
-| Sleep | Wake-up | Hard Reset |
-| - | - | - |
-| `L+R+Select` | `Select+Start` | `L+R+Select+Start` |
+```
+gba-sleephack-patcher-tool <Input file path> <Output file path> [options]
 
-# Patching instructions
+PARAMETERS
+* Input file path
+* Output file path
 
-Download `sleephack.zip` from [Dwedit's sleephack post](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) (the second one, which is Release #2) and replace their `patch.bin` with the one from this repository. Then patch the ROM by running the following command on a `cmd` or a `PowerShell` terminal:
+OPTIONS
+  --no-sleep        Disable Sleep patch Default: "False".
+  --no-hard-reset   Disable Hard Reset patch Default: "False".
+  --sleep-combo     Sleep button combination Default: "L+R+Select".
+  --wake-up-combo   Wake up button combination Default: "Select+Start".
+  --hard-reset-combo  Hard reset button combination Default: "L+R+Select+Start".
+  -h|--help         Shows help text.
+  --version         Shows version information.
+```
+
+## Examples
 
 ```bash
-sleephack <input_file.gba> <output_file.gba>
+> gba-sleephack-patcher-tool rom.gba rom_patched.gba
+
+Sleep button combination: L+R+Select
+Wake up button combination: Select+Start
+Hard reset button combination: L+R+Select+Start
+
+Done! Patched ROM saved as rom_patched.gba
 ```
 
-# Configure button combinations
+```bash
+> gba-sleephack-patcher-tool rom.gba rom_patched.gba --no-hard-reset
 
-To change the button combinations you have to rebuild the `patch.bin` file. Check the [Build instructions](#build-instructions) to do so.
+Sleep button combination: L+R+Select
+Wake up button combination: Select+Start
 
-You have to build your own bitmask by checking the following table:
-| Bitmask | Button |
-| - | - |
-| `00 0000 0001` | A |
-| `00 0000 0010` | B |
-| `00 0000 0100` | Select |
-| `00 0000 1000` | Start |
-| `00 0001 0000` | Right |
-| `00 0010 0000` | Left |
-| `00 0100 0000` | Up |
-| `00 1000 0000` | Down |
-| `01 0000 0000` | R |
-| `10 0000 0000` | L |
-
-For example, `A+B+Right` would be `00 0001 0011`, and `Select+Start+R` would be `01 0000 1100`.
-
-Just change the bitmasks defined at lines 82, 83 and 84 on `patch.s` with your custom ones.
-
-```asm
-SLEEP_BUTTON_MASK		= 0b1100000100	@ L+R+Select
-WAKE_UP_BUTTON_MASK		= 0b0000001100	@ Select+Start
-HARD_RESET_BUTTON_MASK	= 0b1100001100	@ L+R+Select+Start
+Done! Patched ROM saved as rom_patched.gba
 ```
 
-These are the default button combinations:
+```bash
+> gba-sleephack-patcher-tool rom.gba rom_patched.gba --no-hard-reset --sleep-combo "Up+L+R"
 
-| Sleep | Wake-up | Hard Reset |
-| - | - | - |
-| `L+R+Select` | `Select+Start` | `L+R+Select+Start` |
+Sleep button combination: Up+L+R
+Wake up button combination: Select+Start
 
-# Disabling one of the patches
+Done! Patched ROM saved as rom_patched.gba
+```
 
-By default, `patch.bin` comes with both Sleep and Hard Reset patches applied. You can disable one of them by replacing one of the *branch* instructions with a *no-operation* instruction and rebuilding the `patch.bin` file. Check the [Build instructions](#build-instructions) to do so.
+```bash
+> gba-sleephack-patcher-tool rom.gba rom_patched.gba --sleep-combo "Up+L+R" --wake-up-combo "Down+Start" --hard-reset-combo "A+B+R"
 
-| - | Yes |  No |
-| - | - | - |
-| Want both Sleep and Hard Reset patches? | Don't change anything 😛 | Keep reading |
-| Want Sleep patch only? | Replace `beq reset_now` with `nop` at line `125` | Keep reading |
-| Want Hard Reset patch only? | Replace `beq sleep_now` with `nop` at line `120` |  You want nothing! Don't use this repository at all 😛 |
+Sleep button combination: Up+L+R
+Wake up button combination: Down+Start
+Hard reset button combination: A+B+R
 
-# Build instructions
+Done! Patched ROM saved as rom_patched.gba
+```
 
-The `patch.s` file is a file containing assembly code for ARM which will run on the GBA/emulator. You need to compile it into raw bytes so the ARM CPU that's inside the GBA is able to execute it. For this we will use `devkitARM` from `devkitPro`.
+# Build instructions for patch.s
+
+**⚠️ Note: this is just for curious people. You don't have to follow this section if you're only going to use the patcher tool.**
+
+The `patch.s` file is a file containing assembly code for ARM which will run on the GBA/emulator. We need to compile it into raw bytes so the ARM CPU that's inside the GBA is able to execute it. For this we will use `devkitARM` from `devkitPro`.
 
 ## Installing devkitARM
 
@@ -87,6 +90,30 @@ Make sure to add the `devkitARM/bin` directory to the `PATH` environment variabl
 arm-none-eabi-as patch.s -o patch.o
 arm-none-eabi-objcopy -O binary patch.o patch.bin
 ```
+
+# Technical notes
+
+The patcher tool uses a slightly variation of the `patch.bin` file included here. The only change is on lines 82, 83 and 84 from `patch.s`. Why?
+
+- Button combinations are defined in a 10 bit long bitmask.
+- Those bitmasks are loaded later in code with an `LDR` pseudoinstruction.
+- `LDR` is a pseudoinstruction.
+  - If the number defined by the bitmask fits on a 32bit `MOV` instruction, the compiler **will** use a `MOV` instruction. Check [here](https://developer.arm.com/documentation/dui0473/m/writing-arm-assembly-language/load-immediate-values-using-ldr-rd---const) for details.
+  - Some numbers fit on a 32 `MOV` instructions, some other doesn't.
+  - So, some bitmasks fit on a 32 `MOV` instructions, some other doesn't.
+  - So, some button combinations fit on a 32 `MOV` instructions, some other doesn't.
+- We want a standard way to quickly define our own button combinations without needing to build `patch.bin` every time.
+- We want to force the compiler to use an `LDR` instruction. That way any bitmask for a button combination will be defined in the same offset on `patch.bin` and the patcher tool can just replace it.
+
+So for generating the same patch used by the patcher tool, just replace lines 82, 83 and 84 from `patch.s` with:
+
+```asm
+SLEEP_BUTTON_MASK				= 0b1010101010
+WAKE_UP_BUTTON_MASK			= 0b1110101011
+HARD_RESET_BUTTON_MASK	= 0b1011101011
+```
+
+Just ignore the button combinations represented by those bitmasks. I just picked those to ensure they won't fit on a `MOV` instruction and they're different from each other.
 
 # Credits
 

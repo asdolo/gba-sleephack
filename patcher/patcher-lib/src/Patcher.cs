@@ -7,6 +7,9 @@ namespace GBA.Sleephack;
 public class Patcher
 {
     private readonly byte[] _romBinary;
+    private readonly bool _omitSleep;
+    private readonly bool _omitHardReset;
+
     private readonly byte[] _sleepPatchBinary = {
         0x01, 0x13, 0xA0, 0xE3, 0x4C, 0x00, 0x01, 0xE5, 0x34, 0x00, 0x8F, 0xE2, 0x48, 0x00, 0x01, 0xE5,
         0x6C, 0x01, 0x9F, 0xE5, 0x60, 0x00, 0x01, 0xE5, 0x68, 0x01, 0x9F, 0xE5, 0x5C, 0x00, 0x01, 0xE5,
@@ -45,14 +48,19 @@ public class Patcher
     private const uint DUMMY_DATA = 0xDEADBEEF;
 
     private const uint AGB_INTERRUPTION_HANDLER_LOCATION_ADDRESS = 0x03007FFC;
+    private const uint PATCH_SLEEP_BRANCH_INSTRUCTION_OFFSET = 0x60;
+    private const uint PATCH_HARD_RESET_BRANCH_INSTRUCTION_OFFSET = 0x7C;
+    
     private const uint PATCH_SLEEP_BUTTON_COMBO_OFFSET = 0x19C;
     private const uint PATCH_WAKE_UP_BUTTON_COMBO_OFFSET = 0x1AC;
     private const uint PATCH_HARD_RESET_BUTTON_COMBO_OFFSET = 0x1A4;
 
-    public Patcher(byte[] romBinary, Buttons sleepButtonCombination,
+    public Patcher(byte[] romBinary, bool omitSleep, bool omitHardReset, Buttons sleepButtonCombination,
         Buttons wakeUpButtonCombination, Buttons hardResetButtonCombination)
     {
         _romBinary = romBinary;
+        _omitSleep = omitSleep;
+        _omitHardReset = omitHardReset;
         _sleepButtonCombination = sleepButtonCombination;
         _wakeUpButtonCombination = wakeUpButtonCombination;
         _hardResetButtonCombination = hardResetButtonCombination;
@@ -106,6 +114,13 @@ public class Patcher
         // Copy original ROM in the patched ROM bytes array
         Array.Copy(_romBinary, 0, patchedROM, 0, GetROMSize());
         
+        // Omit Sleep Patch or Hard Reset Patch if needed
+        if(_omitSleep)
+            BinaryPrimitives.WriteUInt32LittleEndian(_sleepPatchBinary.AsSpan()[(int) PATCH_SLEEP_BRANCH_INSTRUCTION_OFFSET..], ARM_NOP_INSTRUCTION);
+        
+        if(_omitHardReset)
+            BinaryPrimitives.WriteUInt32LittleEndian(_sleepPatchBinary.AsSpan()[(int) PATCH_HARD_RESET_BRANCH_INSTRUCTION_OFFSET..], ARM_NOP_INSTRUCTION);
+
         // Change button combinations for sleep, wake up and hard reset
 
         BinaryPrimitives.WriteUInt32LittleEndian(

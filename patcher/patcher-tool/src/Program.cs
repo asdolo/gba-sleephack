@@ -15,17 +15,26 @@ public static class Program
         [CommandParameter(1, Name = "Output file path")]
         public string OutputFilePath { get; init; }
 
-        [CommandOption("sleep-combo", Description = "Sleep buttons combination")]
+        [CommandOption("no-sleep", Description = "Disable Sleep patch")]
+        public bool NoSleep { get; init; } = false;
+        
+        [CommandOption("no-hard-reset", Description = "Disable Hard Reset patch")]
+        public bool NoHardReset { get; init; } = false;
+
+        [CommandOption("sleep-combo", Description = "Sleep button combination")]
         public string SleepButtonCombination { get; init; } = "L+R+Select";
 
-        [CommandOption("wake-up-combo", Description = "Wake up buttons combination")]
+        [CommandOption("wake-up-combo", Description = "Wake up button combination")]
         public string WakeUpButtonCombination { get; init; } = "Select+Start";
         
-        [CommandOption("hard-reset-combo", Description = "Hard reset buttons combination")]
+        [CommandOption("hard-reset-combo", Description = "Hard reset button combination")]
         public string HardResetButtonCombination { get; init; } = "L+R+Select+Start";
         
         public ValueTask ExecuteAsync(IConsole console)
         {
+            if (NoSleep && NoHardReset)
+                throw new CommandException("Can't disable both Sleep and Hard Reset patches");
+            
             var romBinary = File.ReadAllBytes(InputFilePath);
 
             var buttonsArgParser = new ButtonsParser();
@@ -35,8 +44,9 @@ public static class Program
                 var sleepButtonCombination = buttonsArgParser.Parse(SleepButtonCombination);
                 var wakeUpButtonCombination = buttonsArgParser.Parse(WakeUpButtonCombination);
                 var hardResetButtonCombination = buttonsArgParser.Parse(HardResetButtonCombination);
-                
-                var patcher = new Patcher(romBinary, sleepButtonCombination, wakeUpButtonCombination, hardResetButtonCombination);
+
+                var patcher = new Patcher(romBinary, NoSleep, NoHardReset, sleepButtonCombination,
+                    wakeUpButtonCombination, hardResetButtonCombination);
 
                 var patchedROM = patcher.GetPatchedROM();
                 
@@ -47,9 +57,15 @@ public static class Program
                 throw new CommandException(ex.Message, 1);
             }
 
-            console.Output.WriteLine($"Sleep button combination: {SleepButtonCombination}");
-            console.Output.WriteLine($"Wake up button combination: {WakeUpButtonCombination}");
-            console.Output.WriteLine($"Hard reset button combination: {HardResetButtonCombination}");
+            if (!NoSleep)
+            {
+                console.Output.WriteLine($"Sleep button combination: {SleepButtonCombination}");
+                console.Output.WriteLine($"Wake up button combination: {WakeUpButtonCombination}");
+            }
+            
+            if (!NoHardReset)
+                console.Output.WriteLine($"Hard reset button combination: {HardResetButtonCombination}");
+    
             console.Output.WriteLine();
 
             console.ForegroundColor = ConsoleColor.Green;

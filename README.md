@@ -1,5 +1,5 @@
 # About
-This is a Sleep Patch & Hard Reset patching tool for GBA ROMs.
+This is a Sleep & Hard Reset patching tool for GBA ROMs.
 
 The assembly code of the patch itself is on `patch.s`, and it's a fork of [Dwedit's sleephack](https://www.dwedit.org/dwedit_board/viewtopic.php?id=306) with a refactor for including a cleaner way to configure both Sleep and Wake-up button combinations, as well as a configurable Hard Reset patch.
 

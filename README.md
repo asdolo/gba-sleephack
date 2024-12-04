@@ -33,20 +33,24 @@ PARAMETERS
 * Output file path
 
 OPTIONS
-  --no-sleep        Disable Sleep patch Default: "False".
-  --no-hard-reset   Disable Hard Reset patch Default: "False".
-  --sleep-combo     Sleep button combination Default: "L+R+Select".
-  --wake-up-combo   Wake up button combination Default: "Select+Start".
-  --hard-reset-combo  Hard reset button combination Default: "L+R+Select+Start".
+  --no-sleep        Disable Sleep patch
+  --no-hard-reset   Disable Hard Reset patch
+  --sleep-combo     Sleep button combination. Default: "L+R+Select".
+  --wake-up-combo   Wake up button combination. Default: "Select+Start".
+  --hard-reset-combo  Hard reset button combination. Default: "L+R+Select+Start".
   -h|--help         Shows help text.
   --version         Shows version information.
 ```
 
 ## Examples
 
+Command:
 ```bash
-> gba-sleephack-patcher-tool rom.gba rom_patched.gba
+gba-sleephack-patcher-tool rom.gba rom_patched.gba
+```
 
+Output:
+```bash
 Sleep button combination: L+R+Select
 Wake up button combination: Select+Start
 Hard reset button combination: L+R+Select+Start
@@ -54,27 +58,45 @@ Hard reset button combination: L+R+Select+Start
 Done! Patched ROM saved as rom_patched.gba
 ```
 
-```bash
-> gba-sleephack-patcher-tool rom.gba rom_patched.gba --no-hard-reset
+---
 
+Command:
+```bash
+gba-sleephack-patcher-tool rom.gba rom_patched.gba --no-hard-reset
+```
+
+Output:
+```bash
 Sleep button combination: L+R+Select
 Wake up button combination: Select+Start
 
 Done! Patched ROM saved as rom_patched.gba
 ```
 
-```bash
-> gba-sleephack-patcher-tool rom.gba rom_patched.gba --no-hard-reset --sleep-combo "Up+L+R"
+---
 
+Command:
+```bash
+gba-sleephack-patcher-tool rom.gba rom_patched.gba --no-hard-reset --sleep-combo "Up+L+R"
+```
+
+Output:
+```bash
 Sleep button combination: Up+L+R
 Wake up button combination: Select+Start
 
 Done! Patched ROM saved as rom_patched.gba
 ```
 
-```bash
-> gba-sleephack-patcher-tool rom.gba rom_patched.gba --sleep-combo "Up+L+R" --wake-up-combo "Down+Start" --hard-reset-combo "A+B+R"
+---
 
+Command:
+```bash
+gba-sleephack-patcher-tool rom.gba rom_patched.gba --sleep-combo "Up+L+R" --wake-up-combo "Down+Start" --hard-reset-combo "A+B+R"
+```
+
+Output:
+```bash
 Sleep button combination: Up+L+R
 Wake up button combination: Down+Start
 Hard reset button combination: A+B+R
